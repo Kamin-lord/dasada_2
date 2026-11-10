@@ -1,0 +1,11 @@
+{
+  "name": "dasada-general-admin",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --no-warnings server/index.js",
+    "test": "node --no-warnings --test server/test.mjs"
+  },
+  "engines": { "node": ">=22.13" }
+}
