@@ -106,4 +106,5 @@ Haqiqiy foydalanishda **HTTPS** (Caddy/Nginx) ishlating. Maktab admini hisoblari
 - **Lichka**: chap tomonda “Oxirgi suhbatlar” va “Ish bo‘limlari” kartochkalari (Dizaynerlar, Tex adminlar …). Bo‘limni bosing → ichidagi odamlar ro‘yxati → odamni tanlang → yozing. Ism bo‘yicha qidiruv barcha bo‘limlardan topadi. O‘qilmagan xabarlar soni bo‘lim kartochkasida ko‘rinadi.
 - `npm test` — 19 ta sinov.
 #   d a s a d a _ 2  
+ #   d a s a d a _ 2  
  
