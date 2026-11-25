@@ -1,1 +1,5 @@
 data
+
+template/al-kundalik/node_modules
+template/al-kundalik/dist
+template/al-kundalik/server/data

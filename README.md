@@ -105,6 +105,36 @@ Haqiqiy foydalanishda **HTTPS** (Caddy/Nginx) ishlating. Maktab admini hisoblari
 - Eski umumiy chat xabarlari “General adminlar” xonasiga ko‘chirildi. Yangi: `GET /api/g/chat/rooms`, `GET|POST /api/g/chat?room=<lavozim>`.
 - **Lichka**: chap tomonda “Oxirgi suhbatlar” va “Ish bo‘limlari” kartochkalari (Dizaynerlar, Tex adminlar …). Bo‘limni bosing → ichidagi odamlar ro‘yxati → odamni tanlang → yozing. Ism bo‘yicha qidiruv barcha bo‘limlardan topadi. O‘qilmagan xabarlar soni bo‘lim kartochkasida ko‘rinadi.
 - `npm test` — 19 ta sinov.
-#   d a s a d a _ 2  
- #   d a s a d a _ 2  
- 
+
+## v18: yangi maktab → shablondan avtomatik sayt
+**Maktablar → + Maktab qo‘shish** da “Shablon bo‘yicha sayt yaratish” belgisi (standart yoqilgan) va ixtiyoriy **domen** maydoni bor. Saqlaganda DASADA:
+1. `template/al-kundalik` (Al-Kundalik shabloni) asosida maktabga **alohida baza** ochadi: `data/sites/<slug>/kundalik.db` (demo ma’lumotsiz: admin, standart fanlar, bitta sinf `1-A`);
+2. maktab **nomi va logosini** saytga qo‘yadi (kirish sahifasi, sarlavha, brauzer nomi) — shablonning boshqa hamma joyi bir xil;
+3. maktab adminini (telefon + parol) yaratadi — parol DASADA dagi bilan **bir xil**; DASADA da “Yangi parol” bersangiz, maktab saytida ham almashadi;
+4. sayt manzillarini beradi.
+
+### Manzillar (port o‘rniga)
+Hostinglarda (Railway va b.) bitta xizmatga bitta port beriladi, shuning uchun har maktabga alohida port emas, **bitta jarayon + Host bo‘yicha yo‘naltirish** ishlatiladi:
+- **o‘z domeni:** `al-xorazmiy.uz` (maktab kartasida yoziladi; domenning DNS (CNAME) ini DASADA xizmatiga yo‘naltiring va hostingda shu domenni qo‘shing);
+- **subdomen:** `SITE_BASE_DOMAIN=kundalik.uz` bersangiz `al-xorazmiy-maktabi.kundalik.uz` (wildcard domen kerak: `*.kundalik.uz`);
+- **sinov yo‘li:** `https://dasada2-production.up.railway.app/s/al-xorazmiy-maktabi/` — domensiz darhol ishlaydi.
+DASADA ning o‘z domenida maktab API si ochilmaydi, faqat panel.
+
+### Ishga tushirish
+```
+npm run build     # shablonni build qiladi (bir marta; Railway buni o‘zi bajaradi)
+npm start
+```
+Railway: **Volume** ulang va `DSD_DATA=/data` bering (aks holda har deployda bazalar o‘chadi). Ixtiyoriy: `SITE_BASE_DOMAIN`, `PUBLIC_URL`.
+
+### Qo‘shimcha
+- Maktab kartasida **Sayt yaratish** tugmasi — avvalgi (sayti yo‘q) maktablar uchun; birinchi faol “admin” olinadi.
+- **Foydalanuvchilar** bo‘limi endi maktab bazasidan jonli o‘qiladi; murojaat va statistikalar o‘zgarmagan.
+- Maktab bloklansa — sayti ham 403 beradi. Maktab o‘chirilsa — baza `data/sites/_deleted-…` ga ko‘chiriladi (yo‘qolmaydi).
+- `npm test` — 27 ta sinov (`test-sites.mjs` — sayt yaratish, Host/yo‘l orqali kirish, parol sinxroni).
+- Shablonni o‘zgartirish: faqat `template/al-kundalik/` ni tahrirlang → `npm run build` → barcha maktablar yangilanadi (bazalar saqlanadi).
+
+## v19: v4 uslubi va maktab saytida “Yordam”
+- Yangi maktab saytlari **al-kundalik v4** uslubida (zumrad rang, Fraunces/Manrope shriftlari, eski logotip). Shablonda `theme.css` olib tashlandi; maktab nomi/logosi avvalgidek.
+- Maktab administratori panelida yangi **Yordam** bo‘limi: muammo yozish (sarlavha, turkum, muhimlik, tavsif), javoblarni shu yerda ko‘rish va yozishma. Murojaat to‘g‘ridan-to‘g‘ri DASADA **Murojaatlar** bo‘limiga (general adminga) tushadi — ulanish kodi kerak emas. General admin javobi maktabda “Yangi javob” belgisi bilan ko‘rinadi.
+- API: `/api/support/tickets` (faqat maktab admini; boshqa yo‘llar yopiq). `npm test` — 28 ta sinov.

@@ -157,6 +157,10 @@ function schoolForm(s, done) {
   modal(`<h3>${ic('school', 22)} ${isNew ? 'Yangi maktab qo‘shish' : 'Maktabni tahrirlash'}</h3><form id="sf">
     ${isNew ? `<div class="logo-up"><div id="lp" class="ava big ph">${ic('school', 28)}</div><div><b>Maktab logosi</b><div class="muted small">PNG, JPG yoki WEBP (ixtiyoriy)</div><button type="button" class="btn o sm" id="lb" style="margin-top:6px">Rasm tanlash</button></div></div>` : ''}
     ${SCHOOL_FIELDS(s || {})}
+    ${isNew && can('schools') ? `<div class="sect"><h4>${ic('globe', 18)} Maktab sayti</h4><label class="f" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" name="mk_site" checked style="width:auto"><span>Shablon (Al-Kundalik) bo‘yicha sayt yaratish — alohida baza bilan</span></label>
+      <label class="f"><span>Maktabning domeni (ixtiyoriy)</span><input name="host" placeholder="al-xorazmiy.uz" maxlength="120" autocapitalize="off"></label>
+      <p class="muted small" style="margin:0">Sayt yaratish uchun pastda maktab admini (ism, telefon) kerak. Domen bo‘sh bo‘lsa, sayt DASADA manzilida <b>/s/maktab-nomi/</b> yo‘lida ochiladi.</p></div>` : ''}
+    ${!isNew && s.hosted ? `<label class="f"><span>Maktabning domeni</span><input name="host" value="${esc(s.host || '')}" placeholder="al-xorazmiy.uz" maxlength="120" autocapitalize="off"></label>` : ''}
     ${isNew && can('admins') ? `<div class="sect"><h4>${ic('user', 18)} Maktab admini</h4><p class="muted small" style="margin-top:0">Admin telefon raqami va paroli bilan keyinchalik maktab saytiga kiradi. Parolni bo‘sh qoldirsangiz, tizim o‘zi yaratadi.</p>
       <div class="two"><label class="f"><span>Ism familiya</span><input name="a_name" maxlength="80"></label><label class="f"><span>Telefon</span><input name="a_phone" inputmode="tel" placeholder="90 123 45 67"></label></div>
       ${pwField('a_pw', 'Parol (kamida 6 belgi)', 'bo‘sh = avtomatik')}</div>` : ''}
@@ -168,13 +172,15 @@ function schoolForm(s, done) {
       const b = Object.fromEntries(new FormData(e.target)), btn = $('button.btn', e.target); btn.disabled = true;
       try {
         if (!isNew) { await api('/g/schools/' + s.id, 'PATCH', b); close(); toast('Saqlandi ✓'); return done(); }
-        const body = { name: b.name, region: b.region, phone: b.phone, address: b.address, note: b.note, logo };
+        const body = { name: b.name, region: b.region, phone: b.phone, address: b.address, note: b.note, logo, createSite: !!b.mk_site, host: b.host || '' };
         if (b.a_name || b.a_phone || b.a_pw) body.admin = { name: b.a_name, phone: b.a_phone, pw: b.a_pw };
         const r = await api('/g/schools', 'POST', body); close(); confetti(); createdModal(r, done);
       } catch (er) { fail(er); btn.disabled = false; }
     };
   });
 }
+const SITE_KIND = { domain: 'Maktab domeni', subdomain: 'Subdomen', path: 'DASADA manzili (sinov)' };
+const siteLinks = list => (list || []).map(x => `<div class="row" style="margin:6px 0"><span class="muted small" style="min-width:150px">${SITE_KIND[x.kind] || ''}</span><a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.url.replace(/^https?:\/\//, ''))}</b></a></div>`).join('');
 const codeOf = key => location.origin + '#' + key;
 function createdModal(r, done) {
   modal(`<h3>🎉 “${esc(r.school.name)}” qo‘shildi!</h3>
@@ -182,7 +188,8 @@ function createdModal(r, done) {
       <p class="small muted" style="margin-bottom:0">Parol faqat hozir ko‘rinadi. Keyin “Yangi parol” orqali almashtirish mumkin.</p></div>` : ''}
     <div class="sect"><h4>${ic('globe', 18)} Server ulanish kodi</h4><p class="muted small" style="margin-top:0">Maktab sayti ulanganda kerak bo‘ladi (Al-Kundalik → Yordam bo‘limiga joylanadi).</p>
       <button class="code" type="button" data-copy="${esc(codeOf(r.key))}">${esc(codeOf(r.key))}</button></div>
-    <div class="warnbox">Maktab sayti hozircha ochilmaydi — admin hisobi saqlandi va sayt tayyor bo‘lganda ishlatiladi.</div>
+    ${r.school.hosted ? `<div class="sect"><h4>${ic('globe', 18)} Maktab sayti tayyor</h4>${siteLinks(r.school.site)}<p class="small muted" style="margin-bottom:0">Domenni (A/CNAME) serverga yo‘naltirgandan keyin shu manzilda ochiladi. Hozircha sinash uchun “DASADA manzili” ishlaydi.</p></div>`
+      : `<div class="warnbox">Sayt yaratilmadi — maktab sahifasidagi “Maktab sayti” bo‘limidan keyin yaratish mumkin.</div>`}
     <div class="row"><button class="btn" data-close>Tayyor</button></div>`, bg => { wireCopy(bg); $$('[data-close]', bg).forEach(b => b.addEventListener('click', done)); });
 }
 
@@ -210,11 +217,20 @@ function infoTab(tb, s, id) {
     <div class="card"><h3>Logo</h3><div class="logo-up">${s.logo ? `<img class="ava big img" src="${esc(s.logo)}" alt="">` : `<div class="ava big ph">${ic('school', 28)}</div>`}
       <div><button class="btn sm" id="lg">${s.logo ? 'Logoni almashtirish' : 'Logo qo‘yish'}</button> ${s.logo ? '<button class="btn o sm" id="lgd">Olib tashlash</button>' : ''}<div class="muted small" style="margin-top:6px">Rasm avtomatik 256×256 ga moslanadi.</div></div></div></div>
   </div>
-  <div class="card site-card"><div class="row"><span class="ti big">${ic('globe', 26)}</span><div style="flex:1;min-width:200px"><h3 style="margin:0">Maktab sayti</h3><div class="muted">Maktabning o‘z Al-Kundalik sayti hozircha ochilmagan. Admin hisoblari saqlanadi va sayt tayyor bo‘lganda ishlaydi.</div></div>
-    <button class="btn o" disabled title="Tez orada">Saytga kirish — tez orada</button></div></div>
+  <div class="card site-card"><div class="row"><span class="ti big">${ic('globe', 26)}</span><div style="flex:1;min-width:200px"><h3 style="margin:0">Maktab sayti</h3>
+      ${s.hosted ? `<div class="muted small" style="margin-bottom:6px">Shablon bo‘yicha yaratilgan, alohida baza bilan ishlaydi. Maktab admini — “Adminlar” bo‘limidagi birinchi <b>admin</b>.</div>${siteLinks(s.site)}`
+        : '<div class="muted">Bu maktabning o‘z Al-Kundalik sayti hali yaratilmagan. Yaratilganda alohida baza, nom va logo bilan shablondan ochiladi.</div>'}</div>
+    ${s.hosted ? `<a class="btn" href="${esc((s.site.find(x => x.kind === 'domain') || s.site[s.site.length - 1]).url)}" target="_blank" rel="noopener">Saytga kirish →</a>`
+      : can('schools') ? '<button class="btn" id="mksite">Sayt yaratish</button>' : ''}</div></div>
   <div class="card"><h3>Server aloqasi</h3><p class="muted small">Maktab serveri ulanganda foydalanuvchilar ma’lumoti shu yerga kelib turadi. Ulanish kodi oxiri: <b>…${esc(s.keyHint)}</b></p>
     <div class="row"><button class="btn o sm" id="rk">Yangi ulanish kodi</button><button class="btn o sm" id="bl">${s.status === 'faol' ? 'Bloklash' : 'Blokdan chiqarish'}</button><span class="sp"></span><button class="btn d sm" id="dl">Maktabni o‘chirish</button></div></div>`;
   $('#ed', tb).onclick = () => schoolForm(s, () => render());
+  const mk = $('#mksite', tb);
+  if (mk) mk.onclick = () => modal(`<h3>${ic('globe', 22)} Sayt yaratish</h3><form id="mf"><label class="f"><span>Maktabning domeni (ixtiyoriy)</span><input name="host" placeholder="al-xorazmiy.uz" maxlength="120" autocapitalize="off"></label>
+      <p class="muted small">Maktab admini sifatida “Adminlar” bo‘limidagi birinchi admin olinadi (parol o‘sha). Admin bo‘lmasa, avval uni qo‘shing.</p>
+      <div class="row"><button class="btn">Yaratish</button><button type="button" class="btn o" data-close>Bekor</button></div></form>`, (bg, close) => {
+    $('#mf', bg).onsubmit = async e => { e.preventDefault(); try { await api(`/g/schools/${id}/site`, 'POST', Object.fromEntries(new FormData(e.target))); close(); toast('Sayt yaratildi ✓'); render(); } catch (er) { fail(er); } };
+  });
   $('#lg', tb).onclick = () => pickLogo(d => api(`/g/schools/${id}/logo`, 'POST', { data: d }).then(() => { toast('Logo saqlandi ✓'); render(); }).catch(fail));
   const lgd = $('#lgd', tb); if (lgd) lgd.onclick = () => api(`/g/schools/${id}/logo`, 'DELETE').then(() => render()).catch(fail);
   $('#bl', tb).onclick = () => api('/g/schools/' + id, 'PATCH', { status: s.status === 'faol' ? 'bloklangan' : 'faol' }).then(() => { toast('Holat o‘zgardi'); render(); }).catch(fail);

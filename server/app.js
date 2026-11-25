@@ -3,6 +3,7 @@ import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto
 import { existsSync, readFileSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, normalize, extname, dirname } from 'node:path';
 import { tx, hashPw, checkPw, newKey, keyHash } from './db.js';
+import { normHost } from './sites.js';
 
 export const CATEGORIES = ['texnik', 'hisob', 'malumot', 'taklif', 'boshqa'];
 export const PRIORITIES = ['past', 'oddiy', 'yuqori', 'shoshilinch'];
@@ -92,7 +93,8 @@ const confirm = (st, b) => { if (!checkPw(String(b.confirm || ''), st.pw_hash)) 
 const isOnline = s => !!s.last_seen && Date.now() - Date.parse(s.last_seen) < ONLINE_MIN * 60e3;
 const schoolOut = s => ({ id: s.id, name: s.name, region: s.region, address: s.address, adminName: s.admin_name, phone: s.phone, url: s.url, note: s.note,
   status: s.status, keyHint: s.key_hint, students: s.students, teachers: s.teachers, classes: s.classes, version: s.version, lastSeen: s.last_seen, online: isOnline(s),
-  createdAt: s.created_at, logo: s.logo || null, hasData: !!s.snapshot, snapAt: s.snap_at, demo: !!s.snap_demo });
+  createdAt: s.created_at, logo: s.logo || null, hasData: !!s.snapshot || !!s.hosted, snapAt: s.snap_at, demo: !!s.snap_demo,
+  hosted: !!s.hosted, slug: s.slug || null, host: s.host || '' });
 const saOut = a => ({ id: a.id, schoolId: a.school_id, name: a.name, phone: a.phone, role: a.role, active: !!a.active, createdAt: a.created_at });
 const ticketOut = (t, extra = {}) => ({ id: t.id, schoolId: t.school_id, title: t.title, category: t.category, priority: t.priority, status: t.status,
   createdAt: t.created_at, updatedAt: t.updated_at, assignee: t.assignee ?? null, ...extra });
@@ -167,7 +169,15 @@ function demoSnapshot() {
 }
 
 /* ---------- General panel ---------- */
-function generalRoute(db, req, path, b, url, st) {
+function generalRoute(db, req, path, b, url, st, hub) {
+  /* maktab sayti: admin (birinchi faol 'admin') ma’lumotini maktab bazasiga ko‘chiradi; URL lar */
+  const syncSite = id => {
+    const s = one(db, 'SELECT * FROM schools WHERE id=?', id);
+    if (!hub || !s || !s.hosted) return;
+    const a = one(db, "SELECT * FROM school_admins WHERE school_id=? AND active=1 AND role='admin' ORDER BY id LIMIT 1", id);
+    if (a) hub.setAdmin(s.slug, a.phone, a.pw_hash);
+  };
+  const siteOut = s => (hub && s.hosted ? hub.urls(s, hub.origin(req)) : []);
   const m = req.method, who = st.login;
   if (path === '/api/g/me' && m === 'GET') return { staff: staffOut(st) };
   if (path === '/api/g/me/password' && m === 'POST') {
@@ -445,7 +455,8 @@ function generalRoute(db, req, path, b, url, st) {
   /* — maktablar — */
   if (path === '/api/g/schools' && m === 'GET') {
     need(st, 'schools');
-    return { schools: all(db, 'SELECT * FROM schools ORDER BY name COLLATE NOCASE').map(s => ({ ...schoolOut(s),
+    if (hub) for (const s of all(db, 'SELECT id,slug FROM schools WHERE hosted=1')) { const c = hub.stats(s.slug); run(db, 'UPDATE schools SET students=?, teachers=?, classes=? WHERE id=?', c.students, c.teachers, c.classes, s.id); }
+    return { schools: all(db, 'SELECT * FROM schools ORDER BY name COLLATE NOCASE').map(s => ({ ...schoolOut(s), site: siteOut(s),
       open: one(db, "SELECT COUNT(*) c FROM tickets WHERE school_id=? AND status IN ('yangi','jarayonda')", s.id).c,
       admins: one(db, 'SELECT COUNT(*) c FROM school_admins WHERE school_id=?', s.id).c })) };
   }
@@ -462,17 +473,28 @@ function generalRoute(db, req, path, b, url, st) {
     }
     const key = newKey();
     const logo = b.logo ? logoOf(b.logo) : null;
+    const wantSite = !!b.createSite && !!hub;
+    if (wantSite && !adm) throw bad('Sayt yaratish uchun maktab admini (ism, telefon, parol) kerak.');
+    const host = hub && b.host ? normHost(b.host) : '';
+    if (host === null) throw bad('Domen noto‘g‘ri (masalan: al-xorazmiy.uz).');
+    if (host && one(db, 'SELECT 1 x FROM schools WHERE host=?', host)) throw bad('Bu domen boshqa maktabga biriktirilgan.');
+    const slug = wantSite ? hub.uniqueSlug(name) : null;
     const id = tx(db, () => {
       const r = run(db, `INSERT INTO schools(name,region,address,admin_name,phone,url,note,key_hash,key_hint,created_at,logo) VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
         name, str(b.region, 80, 'Hudud', false), str(b.address, 200, 'Manzil', false), adm ? aName : '', str(b.phone, 30, 'Telefon', false), str(b.url, 200, 'Sayt manzili', false), str(b.note, 500, 'Izoh', false), keyHash(key), key.slice(-4), now(), logo);
       const sid = Number(r.lastInsertRowid);
       if (adm) run(db, "INSERT INTO school_admins(school_id,name,phone,pw_hash,role,created_at) VALUES(?,?,?,?,'admin',?)", sid, aName, aPhone, hashPw(aPw), now());
-      audit(db, who, 'school.add', name);
+      if (wantSite) {
+        hub.provision(slug, { name, logo, adminPhone: aPhone, adminHash: one(db, 'SELECT pw_hash FROM school_admins WHERE school_id=? ORDER BY id LIMIT 1', sid).pw_hash });
+        run(db, 'UPDATE schools SET slug=?, host=?, hosted=1, students=0, teachers=0, classes=1 WHERE id=?', slug, host || null, sid);
+      }
+      audit(db, who, wantSite ? 'school.add+site' : 'school.add', name);
       return sid;
     });
-    return { school: schoolOut(one(db, 'SELECT * FROM schools WHERE id=?', id)), key, admin: adm ? { name: aName, phone: aPhone, password: aPw } : null };
+    const sc = one(db, 'SELECT * FROM schools WHERE id=?', id);
+    return { school: { ...schoolOut(sc), site: siteOut(sc) }, key, admin: adm ? { name: aName, phone: aPhone, password: aPw } : null };
   }
-  mm = /^\/api\/g\/schools\/(\d+)(\/(key|logo|data|demo-data|admins))?$/.exec(path);
+  mm = /^\/api\/g\/schools\/(\d+)(\/(key|logo|data|demo-data|admins|site))?$/.exec(path);
   if (mm) {
     need(st, 'schools');
     const id = +mm[1], s = one(db, 'SELECT * FROM schools WHERE id=?', id), sub = mm[3];
@@ -484,10 +506,25 @@ function generalRoute(db, req, path, b, url, st) {
       audit(db, who, 'school.key', s.name);
       return { key };
     }
-    if (sub === 'logo' && m === 'POST') { run(db, 'UPDATE schools SET logo=? WHERE id=?', logoOf(b.data), id); audit(db, who, 'school.logo', s.name); return { ok: true }; }
-    if (sub === 'logo' && m === 'DELETE') { run(db, 'UPDATE schools SET logo=NULL WHERE id=?', id); return { ok: true }; }
+    if (sub === 'site' && m === 'POST') {   // mavjud maktab uchun shablondan sayt yaratish
+      if (!hub) throw bad('Sayt yaratish bu serverda o‘chirilgan.');
+      if (s.hosted) throw bad('Bu maktabning sayti allaqachon yaratilgan.');
+      const a = one(db, "SELECT * FROM school_admins WHERE school_id=? AND active=1 AND role='admin' ORDER BY id LIMIT 1", id);
+      if (!a) throw bad('Avval maktab adminini qo‘shing (Adminlar bo‘limi).');
+      const host = b.host ? normHost(b.host) : '';
+      if (host === null) throw bad('Domen noto‘g‘ri (masalan: al-xorazmiy.uz).');
+      if (host && one(db, 'SELECT 1 x FROM schools WHERE host=?', host)) throw bad('Bu domen boshqa maktabga biriktirilgan.');
+      const slug = hub.uniqueSlug(s.name);
+      hub.provision(slug, { name: s.name, logo: s.logo, adminPhone: a.phone, adminHash: a.pw_hash });
+      run(db, 'UPDATE schools SET slug=?, host=?, hosted=1, students=0, teachers=0, classes=1 WHERE id=?', slug, host || null, id);
+      audit(db, who, 'school.site', s.name);
+      return { school: { ...schoolOut(one(db, 'SELECT * FROM schools WHERE id=?', id)), site: siteOut(one(db, 'SELECT * FROM schools WHERE id=?', id)) } };
+    }
+    if (sub === 'logo' && m === 'POST') { const lg = logoOf(b.data); run(db, 'UPDATE schools SET logo=? WHERE id=?', lg, id); if (hub && s.hosted) hub.setBranding(s.slug, { logo: lg }); audit(db, who, 'school.logo', s.name); return { ok: true }; }
+    if (sub === 'logo' && m === 'DELETE') { run(db, 'UPDATE schools SET logo=NULL WHERE id=?', id); if (hub && s.hosted) hub.setBranding(s.slug, { logo: null }); return { ok: true }; }
     if (sub === 'data' && m === 'GET') {
       need(st, 'users');
+      if (hub && s.hosted) return { data: hub.snapshot(s.slug), at: now(), demo: false };
       return { data: s.snapshot ? JSON.parse(s.snapshot) : null, at: s.snap_at, demo: !!s.snap_demo };
     }
     if (sub === 'demo-data' && m === 'POST') {
@@ -505,12 +542,13 @@ function generalRoute(db, req, path, b, url, st) {
         if (one(db, 'SELECT 1 x FROM school_admins WHERE phone=?', phone)) throw bad('Bu telefon raqam boshqa adminga biriktirilgan.');
         const r = run(db, 'INSERT INTO school_admins(school_id,name,phone,pw_hash,role,created_at) VALUES(?,?,?,?,?,?)', id, str(b.name, 80, 'Ism'), phone, hashPw(pw), pick(b.role || 'admin', SA_ROLES, 'Rol'), now());
         audit(db, who, 'sadmin.add', `${s.name}: ${b.name}`);
+        syncSite(id);
         return { admin: saOut(one(db, 'SELECT * FROM school_admins WHERE id=?', r.lastInsertRowid)), password: pw };
       }
     }
     if (!sub && m === 'GET') {
       const sa = all(db, 'SELECT * FROM school_admins WHERE school_id=? ORDER BY role, name COLLATE NOCASE', id).map(saOut);
-      return { school: schoolOut(s), tickets: all(db, 'SELECT * FROM tickets WHERE school_id=? ORDER BY updated_at DESC LIMIT 50', id).map(t => ticketOut(t)), admins: st && permsOf(st).includes('admins') ? sa : [] };
+      return { school: { ...schoolOut(s), site: siteOut(s) }, tickets: all(db, 'SELECT * FROM tickets WHERE school_id=? ORDER BY updated_at DESC LIMIT 50', id).map(t => ticketOut(t)), admins: st && permsOf(st).includes('admins') ? sa : [] };
     }
     if (!sub && m === 'PATCH') {
       const name = b.name !== undefined ? str(b.name, 120, 'Maktab nomi') : s.name;
@@ -519,31 +557,44 @@ function generalRoute(db, req, path, b, url, st) {
       const status = b.status !== undefined ? pick(b.status, SCHOOL_STATUS, 'Holat') : s.status;
       run(db, 'UPDATE schools SET name=?,region=?,address=?,admin_name=?,phone=?,url=?,note=?,status=? WHERE id=?', name, f('region', 'region', 80, 'Hudud'), f('address', 'address', 200, 'Manzil'),
         f('adminName', 'admin_name', 80, 'Admin ismi'), f('phone', 'phone', 30, 'Telefon'), f('url', 'url', 200, 'Sayt manzili'), f('note', 'note', 500, 'Izoh'), status, id);
+      if (hub && s.hosted) {
+        hub.setBranding(s.slug, { name });
+        if (b.host !== undefined) {
+          const host = normHost(b.host);
+          if (host === null) throw bad('Domen noto‘g‘ri (masalan: al-xorazmiy.uz).');
+          if (host && one(db, 'SELECT 1 x FROM schools WHERE host=? AND id<>?', host, id)) throw bad('Bu domen boshqa maktabga biriktirilgan.');
+          run(db, 'UPDATE schools SET host=? WHERE id=?', host || null, id);
+        }
+      }
       audit(db, who, 'school.edit', name + ' ' + status);
-      return { school: schoolOut(one(db, 'SELECT * FROM schools WHERE id=?', id)) };
+      const sc2 = one(db, 'SELECT * FROM schools WHERE id=?', id);
+      return { school: { ...schoolOut(sc2), site: siteOut(sc2) } };
     }
     if (!sub && m === 'DELETE') {
       confirm(st, b);
       tx(db, () => { run(db, 'DELETE FROM ticket_msgs WHERE ticket_id IN (SELECT id FROM tickets WHERE school_id=?)', id); run(db, 'DELETE FROM ticket_notes WHERE ticket_id IN (SELECT id FROM tickets WHERE school_id=?)', id);
         run(db, 'DELETE FROM tickets WHERE school_id=?', id); run(db, 'DELETE FROM school_admins WHERE school_id=?', id); run(db, 'DELETE FROM schools WHERE id=?', id); audit(db, who, 'school.del', s.name); });
+      if (hub && s.hosted) hub.retire(s.slug);
       return { ok: true };
     }
   }
   mm = /^\/api\/g\/school-admins\/(\d+)(\/password)?$/.exec(path);
+  const sync2 = r => { syncSite(mm ? (one(db, 'SELECT school_id FROM school_admins WHERE id=?', +mm[1]) || {}).school_id : 0); return r; };
   if (mm) {
     need(st, 'admins');
     const a = one(db, 'SELECT a.*, s.name sname FROM school_admins a JOIN schools s ON s.id=a.school_id WHERE a.id=?', +mm[1]);
     if (!a) throw new HttpError(404, 'Admin topilmadi.');
-    if (mm[2] && m === 'POST') { const pw = b.pw ? pwOf(b.pw) : genPw(); run(db, 'UPDATE school_admins SET pw_hash=? WHERE id=?', hashPw(pw), a.id); audit(db, who, 'sadmin.reset', `${a.sname}: ${a.name}`); return { password: pw }; }
+    if (mm[2] && m === 'POST') { const pw = b.pw ? pwOf(b.pw) : genPw(); run(db, 'UPDATE school_admins SET pw_hash=? WHERE id=?', hashPw(pw), a.id); audit(db, who, 'sadmin.reset', `${a.sname}: ${a.name}`); return sync2({ password: pw }); }
     if (m === 'PATCH') {
       const phone = b.phone !== undefined ? phoneOf(b.phone) : a.phone;
       if (phone !== a.phone && one(db, 'SELECT 1 x FROM school_admins WHERE phone=?', phone)) throw bad('Bu telefon raqam boshqa adminga biriktirilgan.');
       run(db, 'UPDATE school_admins SET name=?, phone=?, role=?, active=? WHERE id=?', b.name !== undefined ? str(b.name, 80, 'Ism') : a.name, phone,
         b.role !== undefined ? pick(b.role, SA_ROLES, 'Rol') : a.role, b.active !== undefined ? (b.active ? 1 : 0) : a.active, a.id);
       audit(db, who, 'sadmin.edit', `${a.sname}: ${a.name}`);
+      syncSite(a.school_id);
       return { admin: saOut(one(db, 'SELECT * FROM school_admins WHERE id=?', a.id)) };
     }
-    if (m === 'DELETE') { confirm(st, b); run(db, 'DELETE FROM school_admins WHERE id=?', a.id); audit(db, who, 'sadmin.del', `${a.sname}: ${a.name}`); return { ok: true }; }
+    if (m === 'DELETE') { confirm(st, b); run(db, 'DELETE FROM school_admins WHERE id=?', a.id); audit(db, who, 'sadmin.del', `${a.sname}: ${a.name}`); syncSite(a.school_id); return { ok: true }; }
   }
 
   /* — murojaatlar — */
@@ -613,7 +664,7 @@ function generalRoute(db, req, path, b, url, st) {
 }
 
 /* ---------- Maktab tomoni (API kalit bilan) ---------- */
-function schoolRoute(db, req, path, b, school) {
+export function schoolRoute(db, req, path, b, school) {
   const m = req.method;
   if (path === '/api/school/me' && m === 'GET') return { school: { id: school.id, name: school.name, region: school.region } };
   if (path === '/api/school/heartbeat' && m === 'POST') {
@@ -688,7 +739,7 @@ export function seedGeneral(db, { login, pw, N = 16384 } = {}) {
 /* ---------- HTTP ---------- */
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.ico': 'image/x-icon' };
 
-export function createApp(db, { secret, staticDir } = {}) {
+export function createApp(db, { secret, staticDir, hub } = {}) {
   secret ||= loadSecret();
   const fails = new Map();
   const send = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type, x-school-key' }); res.end(JSON.stringify(obj)); };
@@ -709,6 +760,8 @@ export function createApp(db, { secret, staticDir } = {}) {
   return createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x'), path = url.pathname;
     try {
+      const site = hub && hub.resolve(req);
+      if (site) return hub.serve(site, req, res);
       if (req.method === 'OPTIONS') { res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type, x-school-key', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE' }); return res.end(); }
       if (!path.startsWith('/api/')) return serveStatic(res, path);
       if (path === '/api/health') return send(res, 200, { ok: true, service: 'dasada' });
@@ -724,7 +777,7 @@ export function createApp(db, { secret, staticDir } = {}) {
         const m = /^Bearer (.+)$/.exec(req.headers.authorization || '');
         const st = m && staffFromToken(db, m[1], secret);
         if (!st) throw new HttpError(401, 'Qaytadan kiring.');
-        return send(res, 200, generalRoute(db, req, path, req.method === 'GET' ? {} : await body(req, 400e3), url, st));
+        return send(res, 200, generalRoute(db, req, path, req.method === 'GET' ? {} : await body(req, 400e3), url, st, hub));
       }
       if (path.startsWith('/api/school/')) {
         const key = String(req.headers['x-school-key'] || '');

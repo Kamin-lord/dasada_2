@@ -1,0 +1,26 @@
+{
+  "name": "al-kundalik",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "api": "node --no-warnings server/index.js",
+    "build": "vite build",
+    "start": "vite build && node --no-warnings server/index.js",
+    "preview": "vite preview",
+    "test": "node --no-warnings --test server/test.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.510.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}

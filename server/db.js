@@ -52,7 +52,8 @@ export function openDb(file = ':memory:') {
   db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
   db.exec(SCHEMA);
   // 1-versiya bazalar uchun
-  addCols(db, 'schools', [['logo', 'TEXT'], ['snapshot', 'TEXT'], ['snap_at', 'TEXT'], ['snap_demo', 'INTEGER DEFAULT 0']]);
+  addCols(db, 'schools', [['logo', 'TEXT'], ['snapshot', 'TEXT'], ['snap_at', 'TEXT'], ['snap_demo', 'INTEGER DEFAULT 0'], ['slug', 'TEXT'], ['host', 'TEXT'], ['hosted', 'INTEGER DEFAULT 0']]);
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_schools_slug ON schools(slug) WHERE slug IS NOT NULL');
   addCols(db, 'staff', [['logo', 'TEXT']]);
   addCols(db, 'projects', [['logo', 'TEXT'], ['group_id', 'INTEGER']]);
   addCols(db, 'tasks', [['project_id', 'INTEGER']]);

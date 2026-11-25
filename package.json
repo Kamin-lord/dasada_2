@@ -4,8 +4,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "build": "cd template/al-kundalik && npm install --no-audit --no-fund && npm run build",
     "start": "node --no-warnings server/index.js",
-    "test": "node --no-warnings --test server/test.mjs"
+    "test": "node --no-warnings --test server/test.mjs server/test-sites.mjs"
   },
-  "engines": { "node": ">=22.13" }
+  "engines": {
+    "node": ">=22.13"
+  }
 }

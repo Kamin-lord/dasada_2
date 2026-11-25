@@ -1,0 +1,241 @@
+/* ═══════════════════════════════════════════
+   Al-Kundalik — "Samarqand ko'ki" uslubi
+   Kobalt ko'k, za'faron sariq, sakkiz qirrali yulduz naqshi (logotipdagi shakl).
+   index.css dan keyin yuklanadi.
+   ═══════════════════════════════════════════ */
+:root {
+  --tl: #2848d8; --tl-dark: #1c34b0; --tl-text: #2342c4;
+  --gold: #f5a524; --gold-dark: #c77d00; --red: #e5484d;
+  --hdr: #1b2d96;
+  --bg: #f1f4fa; --card: #ffffff; --card-solid: #ffffff; --field: #f6f8fd;
+  --tx: #131a33; --mut: #5d6785; --bd: #e2e7f3; --hl: #eaeefe;
+  --g5: #dcf6e6; --g5t: #0d7a3d; --g4: #fff0cf; --g4t: #9a5b00; --g3: #ffe1e3; --g3t: #c62b31;
+  --shadow: 0 1px 2px rgba(19, 26, 51, .04), 0 10px 26px -14px rgba(40, 72, 216, .22);
+  --shadow-lg: 0 2px 4px rgba(19, 26, 51, .05), 0 26px 50px -22px rgba(40, 72, 216, .4);
+  --radius: 18px; --radius-sm: 12px;
+  --star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg fill='none' stroke='white' stroke-opacity='.11' stroke-width='1.2'%3E%3Crect x='20' y='20' width='32' height='32'/%3E%3Crect x='20' y='20' width='32' height='32' transform='rotate(45 36 36)'/%3E%3C/g%3E%3C/svg%3E");
+}
+:root[data-theme="dark"] {
+  --tl: #3d5af0; --tl-dark: #2f47cf; --tl-text: #9db2ff;
+  --hdr: #0f1738;
+  --bg: #0c1124; --card: #141a33; --card-solid: #141a33; --field: #0f1530;
+  --tx: #e9edff; --mut: #9aa5cf; --bd: #262e52; --hl: rgba(98, 128, 255, .15);
+  --g5: #0f3a25; --g5t: #6fe3a3; --g4: #4a3406; --g4t: #ffcf6b; --g3: #4a1b20; --g3t: #ff9ea3;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 28px -16px rgba(0, 0, 0, .8);
+  --shadow-lg: 0 28px 54px -22px rgba(0, 0, 0, .85);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tl: #3d5af0; --tl-dark: #2f47cf; --tl-text: #9db2ff;
+    --hdr: #0f1738;
+    --bg: #0c1124; --card: #141a33; --card-solid: #141a33; --field: #0f1530;
+    --tx: #e9edff; --mut: #9aa5cf; --bd: #262e52; --hl: rgba(98, 128, 255, .15);
+    --g5: #0f3a25; --g5t: #6fe3a3; --g4: #4a3406; --g4t: #ffcf6b; --g3: #4a1b20; --g3t: #ff9ea3;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 28px -16px rgba(0, 0, 0, .8);
+    --shadow-lg: 0 28px 54px -22px rgba(0, 0, 0, .85);
+  }
+}
+
+body { font: 15px/1.6 'Onest', system-ui, sans-serif; background: var(--bg); }
+h1, h2, h3, .top .nm, .tile b, .hero-avg b, .cls-head, .role b { font-family: 'Rubik', 'Onest', system-ui, sans-serif; letter-spacing: -.01em; }
+h3 { font-weight: 600; }
+.aurora, .shapes, .ripple, .card::before, .role::before, .tc::before, .qa::before, .hero::before, .land::before, .hero::after { display: none !important; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* ═══ Sarlavha ═══ */
+.top {
+  background-color: var(--hdr); background-image: var(--star); background-size: 72px 72px; animation: none;
+  border-bottom: 3px solid var(--gold); box-shadow: 0 10px 30px -18px rgba(11, 18, 70, .7);
+}
+.top.scrolled { box-shadow: 0 14px 34px -16px rgba(11, 18, 70, .85); }
+.top::after { display: none; }
+.brand .logo { filter: none; border-radius: 12px; }
+.top .nm { font-weight: 700; color: #fff; }
+.top small { color: #bcc8ff; opacity: 1; }
+.who { background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .2); }
+.who-t small { color: #ffd98a; }
+.theme-btn { background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .22); color: #fff; }
+.theme-btn:hover { background: rgba(255, 255, 255, .24); transform: none; }
+.lang-sw { background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .2); border-radius: 12px; }
+.lang-sw button { color: #fff; border-radius: 9px; }
+.lang-sw button.on { background: #fff; color: var(--hdr); }
+.clockbar { background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .18); color: #fff; border-radius: 14px; }
+.cb-time small { color: #bcc8ff; }
+
+/* ═══ Tugmalar ═══ */
+button.b {
+  background: var(--tl); border-radius: var(--radius-sm); color: #fff;
+  box-shadow: 0 8px 18px -8px rgba(40, 72, 216, .75); transition: transform .18s, box-shadow .18s, background .18s;
+}
+button.b::after { display: none; }
+button.b:hover { background: var(--tl-dark); transform: translateY(-1px); box-shadow: 0 12px 22px -8px rgba(40, 72, 216, .85); }
+button.b:active { transform: scale(.97); }
+button.b:disabled { box-shadow: none; filter: none; opacity: .45; transform: none; }
+button.b.o { background: var(--card-solid); color: var(--tl-text); border: 1.5px solid var(--bd); box-shadow: none; }
+button.b.o:hover { background: var(--hl); border-color: var(--tl); box-shadow: none; }
+button.b.red { background: var(--red); box-shadow: 0 8px 18px -8px rgba(229, 72, 77, .75); }
+button.b.gold { background: var(--gold); color: #2b1a00; border-radius: var(--radius-sm); box-shadow: none; }
+button.b.gold:hover { background: #ffb73d; }
+button.b.big { background: var(--tl); color: #fff; border-radius: 14px; }
+.ib { border-radius: 10px; }
+.ib:hover { transform: none; }
+.x-btn:hover { transform: none; }
+.back-btn { background: var(--hl); border-radius: 10px; }
+.back-btn:hover { transform: none; }
+
+/* ═══ Tablar ═══ */
+.tabs-in { background: var(--card-solid); border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--shadow); backdrop-filter: none; padding: 5px; }
+.tab-ind { background: var(--tl); border-radius: 12px; box-shadow: 0 8px 16px -8px rgba(40, 72, 216, .85); }
+.tabs button { border-radius: 12px; }
+.tabs button.on { color: #fff; }
+.tabs button.on svg { transform: none; }
+.tab-badge { background: var(--red); border-radius: 99px; }
+
+/* ═══ Kartalar ═══ */
+.card { background: var(--card-solid); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: none; padding: 24px; }
+:root[data-theme="dark"] .card { border-color: var(--bd); }
+.card:hover { box-shadow: var(--shadow); }
+.card.accent { background: var(--hl); border-color: color-mix(in srgb, var(--tl) 40%, var(--bd)); }
+.sec { font-size: 20px; font-weight: 600; }
+.h-ic svg { color: var(--tl); }
+.eyebrow { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; color: #ffd98a; }
+
+.hero { background-color: var(--hdr); background-image: var(--star); background-size: 72px 72px; color: #fff; border: 0; box-shadow: var(--shadow-lg); }
+.hero.gold { background: var(--gold); background-image: none; color: #2b1a00; }
+.hero.gold h2, .hero.gold p, .hero.gold .eyebrow { color: #2b1a00; }
+.hero-avg { background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .28); border-radius: 16px; backdrop-filter: none; }
+.hero.gold .hero-avg { background: rgba(43, 26, 0, .08); border-color: rgba(43, 26, 0, .25); }
+.hero.gold .hero-avg b, .hero.gold .hero-avg span { color: #2b1a00; }
+
+button.tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.tile-ic { border-radius: 14px; background: var(--tl); box-shadow: 0 10px 18px -10px var(--tl); }
+.tile:nth-child(2) .tile-ic { background: var(--gold); color: #2b1a00; box-shadow: 0 10px 18px -10px var(--gold); }
+.tile:nth-child(3) .tile-ic { background: #12a150; box-shadow: 0 10px 18px -10px #12a150; }
+.tile:nth-child(4) .tile-ic { background: #7c5cfc; box-shadow: 0 10px 18px -10px #7c5cfc; }
+.tile:hover .tile-ic { transform: none; }
+.tile-go { color: var(--tl); }
+.qa { border-radius: var(--radius); border: 1px solid var(--bd); background: var(--card-solid); box-shadow: var(--shadow); }
+.qa:hover { transform: translateY(-3px); border-style: solid; border-color: var(--tl); box-shadow: var(--shadow-lg); }
+.qa-ic { border-radius: 12px; }
+.qa:hover .qa-ic { transform: none; background: var(--tl); color: #fff; }
+
+/* ═══ Formalar ═══ */
+input, select, textarea { background: var(--field); border: 1.5px solid var(--bd); border-radius: var(--radius-sm); }
+input:focus, textarea:focus { border-color: var(--tl); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tl) 20%, transparent); background: var(--card-solid); }
+.ph:focus-within { border-color: var(--tl); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tl) 20%, transparent); }
+.ph span { background: var(--hl); color: var(--tl-text); }
+.search input { border-radius: 99px; }
+.fl { color: var(--tx); }
+.sb { background: var(--field); border-radius: var(--radius-sm); }
+.sb:hover, .sb.op { border-color: var(--tl); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tl) 16%, transparent); }
+.sb.op svg { color: var(--tl); }
+.dl { border: 1px solid var(--bd); border-radius: 14px; box-shadow: var(--shadow-lg); }
+.dl button:hover { background: var(--hl); color: var(--tl-text); }
+.dl button.on { background: var(--tl); color: #fff; }
+.chip { border-radius: 12px; background: var(--card-solid); }
+.chip:hover { transform: none; border-color: var(--tl); }
+.chip.on { background: var(--tl); border-color: var(--tl); color: #fff; box-shadow: 0 8px 16px -8px rgba(40, 72, 216, .8); transform: none; }
+.chips.gold .chip.on { background: var(--gold); border-color: var(--gold); color: #2b1a00; box-shadow: none; }
+
+/* ═══ Jadval ═══ */
+th { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; color: var(--mut); }
+tbody tr:hover td { background: var(--hl); }
+tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--tl); }
+tr.sum td { background: var(--hl); border-top: 2px solid var(--bd); }
+.week .today-col { background: var(--hl); }
+
+/* ═══ Baholar va belgilar ═══ */
+.bd { font: 600 14px 'Rubik', sans-serif; border-radius: 10px; padding: 4px 10px; min-width: 34px; }
+.pill { border-radius: 8px; }
+.crown { background: var(--gold); color: #2b1a00; border-radius: 8px; box-shadow: none; }
+.bar { height: 8px; }
+.bar i { background: var(--tl); }
+.gr button { border-radius: 10px; font-family: 'Rubik', sans-serif; font-weight: 600; background: var(--card-solid); }
+.gr button:hover { transform: none; background: var(--hl); }
+.gr button.on { transform: none; animation: none; }
+.tg { border-radius: 12px; }
+.live { text-transform: none; letter-spacing: 0; border-radius: 8px; }
+
+/* ═══ Reyting, ro'yxatlar ═══ */
+.rank { border-radius: 12px; }
+.rank:hover { transform: none; }
+.rank.me { background: color-mix(in srgb, var(--gold) 26%, transparent); box-shadow: inset 3px 0 0 var(--gold); }
+.rk, .medal { border-radius: 8px; }
+.rank:nth-child(1) .rk, .medal.m1 { background: var(--gold); color: #2b1a00; }
+.rank:nth-child(2) .rk, .medal.m2 { background: #cdd5ea; color: #1b2340; }
+.rank:nth-child(3) .rk, .medal.m3 { background: #e6a76c; color: #2b1a00; }
+.warn { border-radius: 10px; border-left-color: var(--gold); }
+.fb-item { border-radius: 12px; }
+.empty-ic { border-radius: 18px; }
+.tc { border-radius: var(--radius); }
+.tc:hover { transform: translateY(-3px); border-color: var(--tl); }
+.leader-box { background: color-mix(in srgb, var(--gold) 16%, var(--card-solid)); border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--bd)); border-radius: var(--radius); }
+.lb-ic { background: var(--gold); color: #2b1a00; border-radius: 14px; box-shadow: none; animation: none; }
+.subj-row, .lesson, .today, .nowcell, .doc-row, .tl > div { border-radius: 12px; }
+.subj-row:hover, .tl > div:hover { transform: none; border-color: var(--tl); }
+.subj-card { border-radius: 16px; }
+.subj-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.ln { background: var(--tl); border-radius: 10px; font-family: 'Rubik', sans-serif; }
+.today.now, .tl .now { background: var(--hl); border-color: var(--tl); animation: none; box-shadow: inset 4px 0 0 var(--tl); }
+.daytab { border-radius: 14px; }
+.daytab:hover:not(:disabled) { transform: none; }
+.daytab.on { background: var(--tl); border-color: var(--tl); color: #fff; box-shadow: 0 10px 18px -10px rgba(40, 72, 216, .9); }
+.daytab.on small, .daytab.on .dt-st { color: #dbe3ff; }
+.daytab.today b::after { color: var(--gold); }
+.lockbar { border-radius: 12px; }
+.cls-logo { border-radius: 30%; background: var(--tl); box-shadow: none; }
+.av { box-shadow: none; }
+
+/* ═══ Sinf sozlamalari ═══ */
+.set-list { display: grid; gap: 12px; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 18px; border: 1px solid var(--bd); border-radius: 14px; background: var(--field); }
+.set-row.col { display: grid; gap: 12px; justify-content: stretch; }
+.set-t { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.set-t small { color: var(--mut); font-size: 13px; }
+.set-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.set-ctl .sl { min-width: 190px; }
+
+/* ═══ Modal va xabarnoma ═══ */
+.mo { background: rgba(12, 17, 36, .55); backdrop-filter: blur(6px); }
+.md { border-radius: 24px; border: 1px solid var(--bd); }
+.md-h { background: var(--hl); }
+.md-ic { background: var(--tl); border-radius: 14px; box-shadow: none; }
+.md.danger .md-ic { background: var(--red); box-shadow: none; }
+.md.success .md-ic { background: var(--gold); color: #2b1a00; }
+.step i { background: var(--tl); }
+.creds > div { border-color: var(--tl); border-radius: 12px; }
+.toast { background: #131a33; border-radius: 14px; border: 1px solid rgba(255, 255, 255, .1); }
+.toast-ic, .toast.info .toast-ic { color: #8fa6ff; }
+.toast-undo { background: var(--gold); color: #2b1a00; }
+.toast-bar { background: var(--gold); }
+
+/* ═══ Kirish sahifasi ═══ */
+.land { background-color: var(--hdr); background-image: var(--star); background-size: 72px 72px; color: #fff; }
+.glow { filter: none; }
+.land .logo { animation: none; border-radius: 22px; box-shadow: 0 24px 48px -20px rgba(0, 0, 0, .55); }
+.land h1 { font-weight: 700; }
+.land h1 span { background: none; color: #fff; -webkit-background-clip: border-box; background-clip: border-box; animation: none; filter: none; }
+.land p.lead { color: #cdd6ff; }
+.roles { perspective: none; }
+.role { background: var(--card-solid); color: var(--tx); border: 0; border-radius: 22px; backdrop-filter: none; transform: none; box-shadow: var(--shadow-lg); }
+.role:hover { background: var(--card-solid); transform: translateY(-6px); box-shadow: 0 34px 56px -24px rgba(0, 0, 0, .6); }
+.role .ic { border-radius: 18px; background: var(--tl); box-shadow: 0 14px 24px -12px var(--tl); color: #fff; }
+.role:nth-child(2) .ic { background: var(--gold); color: #2b1a00; box-shadow: 0 14px 24px -12px var(--gold); }
+.role:nth-child(3) .ic { background: #12a150; box-shadow: 0 14px 24px -12px #12a150; }
+.role:hover .ic { transform: none; }
+.role small { color: var(--mut); }
+.feat { color: #cdd6ff; }
+.auth-ic { background: var(--tl); border-radius: 16px; box-shadow: none; }
+.demo-btn { border-radius: 12px; }
+.demo-btn:hover { border-color: var(--gold); color: var(--tx); background: color-mix(in srgb, var(--gold) 20%, transparent); }
+
+@media (max-width: 760px) {
+  .card { padding: 18px; border-radius: 16px; }
+  .set-row { padding: 14px; }
+  .set-ctl .sl { min-width: 0; flex: 1 1 100%; }
+  .role { text-align: left; }
+}
+
+/* ═══ Tuzatishlar: class nomlari to'qnashuvi ═══ */
+.cb-st.lesson, .cb-st.break, .cb-st.meal { display: inline-flex; background: none; border: 0; padding: 0; grid-template-columns: none; animation: none; color: #fff; }
+.sb.empty { display: inline-flex; justify-items: initial; text-align: left; gap: 10px; padding: 10px 12px 10px 14px; animation: none; }
